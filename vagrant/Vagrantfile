@@ -48,15 +48,13 @@ if ARGV[0] == "up"
   # only perform network reconfiguration on 'vagrant up' command when using virtualbox provider
   provider = "virtualbox" # default
 
+  args = Hash[ ARGV.flat_map{|s| s.scan(/--?([^=\s]+)(?:=(\S+))?/) } ]
+
   # did the user pass in a "--provider" flag?
   passed_provider = false
-  ARGV.each do|a|
-      if a == "--provider"
-        passed_provider = true
-      elsif passed_provider
-        provider = a
-        break
-      end
+  if args.key?('provider')
+    passed_provider = true
+    provider = args['provider']
   end
 
   # does the user have the VAGRANT_DEFAULT_PROVIDER environment variable set
@@ -68,7 +66,7 @@ if ARGV[0] == "up"
     end
   end
 
-  puts("provider=#{provider}")
+  #puts("provider=#{provider}")
 
   # only perform network reconfiguration if using the 'virtualbox' provider
   if provider == "virtualbox"
@@ -216,5 +214,61 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         vb.customize ["modifyvm", :id, "--clipboard", "disabled"]
         vb.customize ["modifyvm", :id, "--usbehci", "off"]
         vb.customize ["modifyvm", :id, "--vrde", "off"]
+    end
+
+    # simplify "provider" determination (changes depending on if on windows/linux or mac os)
+    if (/darwin/ =~ RUBY_PLATFORM) != nil
+      vmware = "vmware_fusion"
+    else
+      vmware = "vmware_workstation"
+    end
+
+    config.vm.provider vmware do |vw|
+      # Don't boot with headless mode
+      #vw.gui = true
+
+      vw.vmx["displayName"] = "stackinabox" # sets the name that virtual box will show in it's UI
+      vw.vmx["numvcpus"] = "4" # set number of vcpus
+      vw.vmx["memsize"] = "8192" # set amount of memory allocated vm memory
+      vw.vmx["hypervisor.cpuid.v0"] = "FALSE"
+      vw.vmx["mce.enable"] = "TRUE"
+      vw.vmx["vhv.enable"] = "TRUE" # turn on host hardware virtualization extensions (VT-x|AMD-V)
+      vw.vmx["guestOS"] = "ubuntu-64" # set guest OS type
+      vw.vmx["virtualhw.version"] = "8"
+      vw.vmx["config.version"] = "8"
+
+      # needed to ensure when machine is booted for first time it is assigned the correct network
+      if vmware == "vmware_fusion"
+        vw.vmx["ethernet1.addresstype"] = "static"
+        vw.vmx["ethernet1.connectiontype"] = "custom"
+        vw.vmx["ethernet1.present"] = "TRUE"
+        vw.vmx["ethernet1.virtualdev"] = "e1000"
+        vw.vmx["ethernet1.vnet"] = "vmnet2"
+        vw.vmx["ethernet1.address"] = "00:50:56:36:B2:20"
+        vw.vmx["ethernet2.addresstype"] = "static"
+        vw.vmx["ethernet2.connectiontype"] = "custom"
+        vw.vmx["ethernet2.present"] = "TRUE"
+        vw.vmx["ethernet2.virtualdev"] = "e1000"
+        vw.vmx["ethernet2.vnet"] = "vmnet3"
+        vw.vmx["ethernet2.address"] = "00:50:56:3F:92:84"
+      end
+
+      # Fusion Performance Hacks
+      vw.vmx["logging"] = "FALSE"
+      vw.vmx["MemTrimRate"] = "0"
+      vw.vmx["MemAllowAutoScaleDown"] = "FALSE"
+      vw.vmx["mainMem.backing"] = "swap"
+      vw.vmx["sched.mem.pshare.enable"] = "FALSE"
+      vw.vmx["snapshot.disabled"] = "TRUE"
+      vw.vmx["isolation.tools.unity.disable"] = "TRUE"
+      vw.vmx["unity.allowCompostingInGuest"] = "FALSE"
+      vw.vmx["unity.enableLaunchMenu"] = "FALSE"
+      vw.vmx["unity.showBadges"] = "FALSE"
+      vw.vmx["unity.showBorders"] = "FALSE"
+      vw.vmx["unity.wasCapable"] = "FALSE"
+      vw.vmx["priority.grabbed"] = "high"
+      vw.vmx["priority.ungrabbed"] = "high"
+      vw.vmx["mainmem.backing"] = "swap"
+      vw.vmx["mainMem.allow8GB"] = "TRUE"
     end
 end
