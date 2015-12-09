@@ -5,7 +5,7 @@ $use_nfs = true
 $box = "stackina-base-box"
 
 # Box url
-$box_url = "https://github.com/tpouyer/stackina-base-box/releases/download/stable%2Fliberty/metadata.json"
+$box_url = "https://github.com/tpouyer/stackina-base-box/releases/download/stable%2Fliberty/stackinabox.box"
 
 # Number of CPU's (min 2, recommend 4) adjust to your machine
 $cpus = 4
